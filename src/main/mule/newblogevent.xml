@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="5a25ce4b-0572-4555-aaa9-cc9030b1c0ea" >
+		<salesforce:basic-connection username="nissisales@conflowence.com" password="salesforce29" securityToken="5lt8CRKO06XiIDFE4koWWy5b" />
+	</salesforce:sfdc-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="700dfc43-0ed1-465f-8d2a-6d62874d5821" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="publish-platform-event-flow" doc:id="a5fd7f25-ca15-4980-b213-23e64d42bcc9" >
+		<http:listener doc:name="Listener" doc:id="cf4e0e19-bd97-40f6-9747-786ae9e4d726" config-ref="HTTP_Listener_config" path="/PublishPlatformEvent"/>
+		<ee:transform doc:name="Transform Message" doc:id="940d4e24-a384-4a82-8ece-eca0f29a8ef2" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	Blog_Name__c:"PublishEventBlog",
+	Author__c:"NotSpecified"
+}]]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<salesforce:publish-platform-event-message doc:name="Publish platform event message" doc:id="af277ce8-10ce-41ae-9126-c827fa96ca19" config-ref="Salesforce_Config" platformEventName="NewNJCBlog__e">
+		</salesforce:publish-platform-event-message>
+		<ee:transform doc:name="Transform Message" doc:id="cfefec09-2ca8-4320-91a3-5eec20b5742f" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+
+  payload
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="6ae97d63-2399-412b-85cd-cfce40c6e79b" />
+	</flow>
+	<flow name="Receive-platform-event-message-flow" doc:id="9ec482f3-5200-478a-856a-8f4c7dd6cf07" >
+		<salesforce:replay-channel-listener streamingChannel="/event/NewNJCBlog__e" replayOption="ALL" doc:name="Replay channel listener" doc:id="61abc4c1-efb4-41f8-a432-0fd4a09ed9b3" config-ref="Salesforce_Config"/>
+		<logger level="INFO" doc:name="Logger" doc:id="97112c02-f843-4ddc-9491-c70b96399fa1" />
+	</flow>
+	<flow name="newblogeventFlow" doc:id="605ff5d2-6617-42bf-a17c-29fcf4a7b3b8" >
+		<salesforce:subscribe-channel-listener streamingChannel="/event/NewNJCBlog__e" doc:name="Subscribe channel listener" doc:id="1e86d50c-f52a-4136-9c8e-dafa125cbcf4" config-ref="Salesforce_Config"/>
+		<logger level="INFO" doc:name="Logger" doc:id="9c572078-6ecb-434c-9849-064aaf8b805c" />
+	</flow>
+</mule>
